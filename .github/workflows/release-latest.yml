@@ -65,7 +65,19 @@ jobs:
                 }
             });
             core.setOutput("sha_short", shortHash);
-            core.setOutput("build_id", context.runNumber + 600);
+            
+            const runs = await github.rest.actions.listWorkflowRuns({
+                owner: 'BepInEx',
+                repo: 'BepInEx',
+                workflow_id: 'build.yml',
+                branch: 'master',
+                per_page: 1
+            });
+            let upstreamRunNumber = context.runNumber;
+            if (runs.data.total_count > 0) {
+                upstreamRunNumber = runs.data.workflow_runs[0].run_number;
+            }
+            core.setOutput("build_id", upstreamRunNumber + 600);
 
       - uses: actions/setup-dotnet@v4
         if: steps.compare.outputs.should_build == 'true'
