@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "0 * * * *" # Run every hour
   workflow_dispatch: # Allow manual trigger
+  push:
+    branches:
+      - master # Trigger on pushes to master, but we will check for new commits in the workflow
 
 permissions:
   contents: write
@@ -86,7 +89,7 @@ jobs:
             LAST_COMMIT=$(git rev-parse HEAD~5) # Default to last 5 commits if no previous release
           fi
           changelog=$(git --no-pager log --no-merges --pretty="format:- (\`%h\`) [%an] %s" $LAST_COMMIT..HEAD)
-          
+
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           echo "changelog<<$EOF" >> $GITHUB_OUTPUT
           echo "$changelog" >> $GITHUB_OUTPUT
@@ -100,10 +103,10 @@ jobs:
           name: BepInEx Bleeding Edge Build #${{ steps.info.outputs.build_id }}
           body: |
             BepInEx Bleeding Edge automated build from upstream master.
-            
+
             **Upstream Commit:** ${{ steps.remote.outputs.sha }}
             **BepInEx-Commit:** ${{ steps.remote.outputs.sha }}
-            
+
             ### Changelog
             ${{ steps.generate_changelog.outputs.changelog }}
           prerelease: true
