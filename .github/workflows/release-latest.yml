@@ -11,6 +11,9 @@ on:
 permissions:
   contents: write
 
+env:
+  VERSION: "6.0.0"
+
 jobs:
   check-and-release:
     runs-on: ubuntu-latest
@@ -65,7 +68,7 @@ jobs:
                 }
             });
             core.setOutput("sha_short", shortHash);
-            
+
             const runs = await github.rest.actions.listWorkflowRuns({
                 owner: 'BepInEx',
                 repo: 'BepInEx',
@@ -111,7 +114,7 @@ jobs:
         if: steps.compare.outputs.should_build == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: bleeding-edge-${{ steps.info.outputs.build_id }}
+          tag_name: v${{ env.VERSION }}-be.${{ steps.info.outputs.build_id }}
           name: BepInEx Bleeding Edge Build #${{ steps.info.outputs.build_id }}
           body: |
             BepInEx Bleeding Edge automated build from upstream master.
