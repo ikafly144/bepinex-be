@@ -116,7 +116,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VERSION }}-be.${{ steps.info.outputs.build_id }}
-          name: BepInEx Bleeding Edge Build \#${{ steps.info.outputs.build_id }}
+          name: BepInEx Bleeding Edge Build ${{ steps.info.outputs.build_id }}
           body: |
             BepInEx Bleeding Edge automated build from upstream master.
 
