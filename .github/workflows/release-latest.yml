@@ -27,11 +27,12 @@ jobs:
 
       - name: Get last released commit
         id: local
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Fetch tags to find the last bleeding-edge release
-          git clone --depth=1 https://github.com/${{ github.repository }}.git repo
-          cd repo
-          LAST_SHA=$(git log -n 1 --format=%b | grep "BepInEx-Commit:" | cut -d':' -f2 | xargs || echo "none")
+          # Extract only the hexadecimal hash (7-40 chars) from the "BepInEx-Commit:" line
+          # This avoids issues with surrounding characters like '**'
+          LAST_SHA=$(gh api repos/${{ github.repository }}/releases --jq '.[] | select(.tag_name | contains("-be.")) | .body' | grep "BepInEx-Commit:" | head -n 1 | grep -oE "[a-f0-9]{7,40}" | head -n 1 || echo "none")
           echo "last_sha=$LAST_SHA" >> $GITHUB_OUTPUT
           echo "Last released commit: $LAST_SHA"
 
@@ -115,7 +116,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VERSION }}-be.${{ steps.info.outputs.build_id }}
-          name: BepInEx Bleeding Edge Build #${{ steps.info.outputs.build_id }}
+          name: BepInEx Bleeding Edge Build \#${{ steps.info.outputs.build_id }}
           body: |
             BepInEx Bleeding Edge automated build from upstream master.
 
