@@ -6,7 +6,7 @@ on:
   workflow_dispatch: # Allow manual trigger
     inputs:
       build_id:
-        description: "Specific Build ID to build (run_number + 600). Leave empty for latest."
+        description: 'Specific Build ID to build (run_number + 600). Leave empty for latest.'
         required: false
         type: string
   push:
@@ -39,14 +39,13 @@ jobs:
                     owner: 'BepInEx',
                     repo: 'BepInEx',
                     workflow_id: 'build.yml',
-                    per_page: 100 // Search in recent runs
+                    per_page: 100
                 });
                 const targetRun = runs.data.workflow_runs.find(r => r.run_number === runNumber);
                 if (targetRun) {
                     targetSha = targetRun.head_sha;
                     targetBuildId = buildIdInput;
                     shouldBuild = true;
-                    console.log(`Targeting Build ID ${targetBuildId} (Run ${runNumber}) at SHA ${targetSha}`);
                 } else {
                     core.setFailed(`Could not find upstream run with number ${runNumber}`);
                 }
@@ -72,7 +71,7 @@ jobs:
                         if (match) lastSha = match[1];
                     }
                 } catch (e) {
-                    console.log("No previous releases found or error fetching: " + e);
+                    console.log("No previous releases found.");
                 }
 
                 if (latestSha !== lastSha) {
@@ -88,6 +87,23 @@ jobs:
                     });
                     const runNumber = runs.data.total_count > 0 ? runs.data.workflow_runs[0].run_number : context.runNumber;
                     targetBuildId = (runNumber + 600).toString();
+                }
+            }
+
+            // CHECK IF ALREADY RELEASED
+            if (shouldBuild && targetBuildId) {
+                const tagName = `v${process.env.VERSION}-be.${targetBuildId}`;
+                try {
+                    await github.rest.repos.getReleaseByTag({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        tag: tagName
+                    });
+                    console.log(`Release ${tagName} already exists. Skipping build.`);
+                    shouldBuild = false;
+                } catch (e) {
+                    // Tag does not exist, proceed with build
+                    console.log(`Release ${tagName} not found. Proceeding.`);
                 }
             }
 
@@ -118,6 +134,13 @@ jobs:
       - name: Build
         if: steps.target.outputs.should_build == 'true'
         run: |
+          # Inject the desired version into Directory.Build.props
+          VERSION_STR="${{ env.VERSION }}-be.${{ steps.target.outputs.build_id }}"
+          sed -i "s|<VersionPrefix>.*</VersionPrefix>|<VersionPrefix>$VERSION_STR</VersionPrefix>|" Directory.Build.props
+          
+          # Hack Program.cs to avoid double suffixing
+          sed -i 's/public string VersionSuffix =>.*/public string VersionSuffix => "";/' build/Program.cs
+          
           # Use HEAD~1 for changelog fallback
           LAST_COMMIT=$(git rev-parse HEAD~1)
           ./build.sh --target Publish --build-type BleedingEdge --build-id ${{ steps.target.outputs.build_id }} --last-build-commit "$LAST_COMMIT" --nuget-api-key "${{ secrets.BEPIN_DEV_NUGET_KEY }}"
@@ -128,7 +151,7 @@ jobs:
         run: |
           # Show recent commits for the target SHA
           changelog=$(git --no-pager log --no-merges --pretty="format:- (\`%h\`) [%an] %s" -n 10)
-
+          
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           echo "changelog<<$EOF" >> $GITHUB_OUTPUT
           echo "$changelog" >> $GITHUB_OUTPUT
