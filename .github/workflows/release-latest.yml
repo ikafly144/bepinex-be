@@ -91,20 +91,10 @@ jobs:
       - name: Build
         if: steps.compare.outputs.should_build == 'true'
         run: |
-          # Inject the desired version into Directory.Build.props
-          VERSION_STR="${{ env.VERSION }}-be.${{ steps.info.outputs.build_id }}"
-          sed -i "s|<VersionPrefix>.*</VersionPrefix>|<VersionPrefix>$VERSION_STR</VersionPrefix>|" Directory.Build.props
-          
-          # Hack Program.cs to avoid double suffixing and ensure it treats this as a non-release build for SourceRevisionId
-          # We force VersionSuffix to be empty because we already put it in VersionPrefix
-          sed -i 's/public string VersionSuffix =>.*/public string VersionSuffix => "";/' build/Program.cs
-          
-          LAST_COMMIT="${{ steps.local.outputs.last_sha }}"
-          if [ "$LAST_COMMIT" == "none" ]; then
-            LAST_COMMIT=$(git rev-parse HEAD~1)
-          fi
-          
-          ./build.sh --target Publish --build-type BleedingEdge --build-id ${{ steps.info.outputs.build_id }} --last-build-commit "$LAST_COMMIT" --nuget-api-key "${{ secrets.BEPIN_DEV_NUGET_KEY }}"
+          # Find last successful commit within BepInEx repo if possible, or fallback
+          # For simplicity in this external monitor, we use the current HEAD~1 as a guess for changelog
+          LAST_COMMIT=$(git rev-parse HEAD~1)
+          ./build.sh --target Publish --build-type ${{ steps.info.outputs.build_type }} --build-id ${{ steps.info.outputs.build_id }} --last-build-commit "$LAST_COMMIT" --nuget-api-key "${{ secrets.BEPIN_DEV_NUGET_KEY }}"
 
       - name: Generate changelog
         if: steps.compare.outputs.should_build == 'true'
