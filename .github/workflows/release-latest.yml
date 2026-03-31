@@ -16,9 +16,6 @@ on:
 permissions:
   contents: write
 
-env:
-  VERSION: "6.0.0"
-
 jobs:
   check-and-release:
     runs-on: ubuntu-latest
@@ -167,4 +164,5 @@ jobs:
           prerelease: true
           files: ./bin/dist/*.zip
         env:
+          VERSION: "6.0.0"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
