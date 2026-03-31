@@ -16,13 +16,16 @@ on:
 permissions:
   contents: write
 
+env:
+  TAG_VERSION: "6.0.0"
+
 jobs:
   check-and-release:
     runs-on: ubuntu-latest
     steps:
       - name: Get Target Info
         id: target
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const buildIdInput = context.payload.inputs ? context.payload.inputs.build_id : '';
@@ -89,7 +92,7 @@ jobs:
 
             // CHECK IF ALREADY RELEASED
             if (shouldBuild && targetBuildId) {
-                const tagName = `v${process.env.VERSION}-be.${targetBuildId}`;
+                const tagName = `v${process.env.TAG_VERSION}-be.${targetBuildId}`;
                 try {
                     await github.rest.repos.getReleaseByTag({
                         owner: context.repo.owner,
@@ -151,7 +154,7 @@ jobs:
         if: steps.target.outputs.should_build == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ env.VERSION }}-be.${{ steps.target.outputs.build_id }}
+          tag_name: v${{ env.TAG_VERSION }}-be.${{ steps.target.outputs.build_id }}
           name: BepInEx Bleeding Edge Build ${{ steps.target.outputs.build_id }}
           body: |
             BepInEx Bleeding Edge automated build from upstream.
@@ -164,5 +167,4 @@ jobs:
           prerelease: true
           files: ./bin/dist/*.zip
         env:
-          VERSION: "6.0.0"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
